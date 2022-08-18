@@ -1,5 +1,6 @@
 pipeline {
   triggers {
+    pollSCM('H/5 * * * *')
   }
   agent {
     node {
@@ -9,13 +10,18 @@ pipeline {
   stages {
     stage ('Check resource drift') {
       steps {
+	sh 'oc diff -k config | tee drift-report.txt'
+	sh '! test -s drift-report.txt'
       }
     }
   }
   post {
     failure {
+	archiveArtifacts artifacts: '*.txt'
+      	build Job 'apply/master'
     }
     success {
+	sh 'rm drift-report.txt'
     }
   }
 }
